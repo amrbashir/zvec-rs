@@ -19,7 +19,7 @@ permissions:
 
 env:
   ZVEC_REPO: alibaba/zvec
-  ZVEC_REV: v0.3.0
+  ZVEC_REV: v0.4.0
 
 jobs:
   prepare:
