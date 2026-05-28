@@ -15,6 +15,7 @@ const CHECKSUMS: &[(&str, &str)] = &[
     ("aarch64-unknown-linux-gnu", "a14ec1342aa0de8ee8545dcd520f6f0b95968f910e155d34376197b89df9eb66"),
     ("x86_64-apple-darwin", "741a627ef288d572e49a345b47795bc328a8d7f2a7d9e9b4e7be03ad94ac0638"),
     ("aarch64-apple-darwin", "df0817b703004dc6e4f656f0289eb1823563820e329c229106fedfb58c45d755"),
+    ("aarch64-apple-ios", ""),
     ("x86_64-pc-windows-msvc", "dc77218e28606e8a7f1eb2ca5ed32b767278e56219e1b017bbd6ce6d45103d87"),
     ("aarch64-linux-android", "729602537cb4dad3cb39f7e165cc2fd7a1682d25b00054af78becbd129799fa7"),
 ];
@@ -29,6 +30,7 @@ fn target_triple() -> String {
         ("aarch64", "linux", "gnu") => "aarch64-unknown-linux-gnu".into(),
         ("x86_64", "macos", _) => "x86_64-apple-darwin".into(),
         ("aarch64", "macos", _) => "aarch64-apple-darwin".into(),
+        ("aarch64", "ios", _) => "aarch64-apple-ios".into(),
         ("x86_64", "windows", "msvc") => "x86_64-pc-windows-msvc".into(),
         ("aarch64", "android", _) => "aarch64-linux-android".into(),
         _ => panic!("unsupported target: {arch}-{os}-{env}"),
@@ -38,7 +40,7 @@ fn target_triple() -> String {
 fn lib_filename(os: &str) -> &'static str {
     match os {
         "windows" => "zvec_c_api.dll",
-        "macos" => "libzvec_c_api.dylib",
+        "macos" | "ios" => "libzvec_c_api.dylib",
         _ => "libzvec_c_api.so",
     }
 }
@@ -101,7 +103,7 @@ fn copy_shared_libs_to_target(lib_dir: &Path) {
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let ext = match os.as_str() {
         "windows" => "dll",
-        "macos" => "dylib",
+        "macos" | "ios" => "dylib",
         _ => "so",
     };
 
