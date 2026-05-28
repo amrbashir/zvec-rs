@@ -78,6 +78,9 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             cmake_extra: "-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
+          - target: aarch64-apple-ios
+            os: macos-latest
+            cmake_extra: "-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_ARCHITECTURES=arm64 -DIOS=ON"
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             cmake_extra: ""
@@ -106,6 +109,13 @@ jobs:
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v6
 
+      - name: Patch zvec iOS static library names
+        if: matrix.target == 'aarch64-apple-ios'
+        shell: bash
+        run: |
+          perl -0pi -e 's/if\(NOT MSVC\)\n    set_property\(TARGET \$\{_NAME\}_static PROPERTY OUTPUT_NAME \$\{_NAME\}\)\n  endif\(\)/if(NOT MSVC AND NOT IOS)\n    set_property(TARGET \${_NAME}_static PROPERTY OUTPUT_NAME \${_NAME})\n  endif()/g' _zvec/cmake/bazel.cmake
+          grep -q 'if(NOT MSVC AND NOT IOS)' _zvec/cmake/bazel.cmake
+
       - name: Setup Android NDK
         if: matrix.target == 'aarch64-linux-android'
         uses: android-actions/setup-android@v3
@@ -118,9 +128,10 @@ jobs:
         run: echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
       # Android needs host protoc first — use a separate source copy
-      # so patches applied here don't conflict with the cross-compile build
-      - name: Build host protoc (Android)
-        if: matrix.target == 'aarch64-linux-android'
+      # so patches applied here don't conflict with the cross-compile build.
+      # iOS is also a cross-compile and cannot use a target-built protoc.
+      - name: Build host protoc
+        if: matrix.target == 'aarch64-linux-android' || matrix.target == 'aarch64-apple-ios'
         shell: bash
         run: |
           cp -r _zvec _zvec-host
@@ -132,8 +143,12 @@ jobs:
         run: |
           EXTRA="${{ matrix.cmake_extra }}"
           PROTOC_FLAG=""
-          if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
+          SDK_FLAG=""
+          if [ "${{ matrix.target }}" = "aarch64-linux-android" ] || [ "${{ matrix.target }}" = "aarch64-apple-ios" ]; then
             PROTOC_FLAG="-DGLOBAL_CC_PROTOBUF_PROTOC=${{ github.workspace }}/_zvec-host/build/bin/protoc"
+          fi
+          if [ "${{ matrix.target }}" = "aarch64-apple-ios" ]; then
+            SDK_FLAG="-DCMAKE_OSX_SYSROOT=$(xcrun --sdk iphoneos --show-sdk-path)"
           fi
           cmake -S _zvec -B _zvec/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -141,7 +156,7 @@ jobs:
             -DBUILD_C_BINDINGS=ON \
             -DBUILD_PYTHON_BINDINGS=OFF \
             -DBUILD_TOOLS=OFF \
-            $EXTRA $PROTOC_FLAG
+            $EXTRA $PROTOC_FLAG $SDK_FLAG
 
       - name: Build
         shell: bash
@@ -230,6 +245,7 @@ jobs:
             -e 's|("aarch64-unknown-linux-gnu", "[^"]*")|("aarch64-unknown-linux-gnu", "${{ steps.checksums.outputs.aarch64_unknown_linux_gnu }}")|' \
             -e 's|("x86_64-apple-darwin", "[^"]*")|("x86_64-apple-darwin", "${{ steps.checksums.outputs.x86_64_apple_darwin }}")|' \
             -e 's|("aarch64-apple-darwin", "[^"]*")|("aarch64-apple-darwin", "${{ steps.checksums.outputs.aarch64_apple_darwin }}")|' \
+            -e 's|("aarch64-apple-ios", "[^"]*")|("aarch64-apple-ios", "${{ steps.checksums.outputs.aarch64_apple_ios }}")|' \
             -e 's|("x86_64-pc-windows-msvc", "[^"]*")|("x86_64-pc-windows-msvc", "${{ steps.checksums.outputs.x86_64_pc_windows_msvc }}")|' \
             -e 's|("aarch64-linux-android", "[^"]*")|("aarch64-linux-android", "${{ steps.checksums.outputs.aarch64_linux_android }}")|' \
             build.rs

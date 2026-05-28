@@ -51,3 +51,65 @@ jobs:
         run: |
           export BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
           cargo build -p zvec --target aarch64-linux-android --example basic
+
+  ios:
+    runs-on: macos-latest
+    env:
+      ZVEC_REPO: alibaba/zvec
+      ZVEC_REV: v0.4.0
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout zvec
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.ZVEC_REPO }}
+          ref: ${{ env.ZVEC_REV }}
+          path: _zvec
+          submodules: recursive
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v6
+
+      - name: Patch zvec iOS static library names
+        run: |
+          perl -0pi -e 's/if\(NOT MSVC\)\n    set_property\(TARGET \$\{_NAME\}_static PROPERTY OUTPUT_NAME \$\{_NAME\}\)\n  endif\(\)/if(NOT MSVC AND NOT IOS)\n    set_property(TARGET \${_NAME}_static PROPERTY OUTPUT_NAME \${_NAME})\n  endif()/g' _zvec/cmake/bazel.cmake
+          grep -q 'if(NOT MSVC AND NOT IOS)' _zvec/cmake/bazel.cmake
+
+      - name: Add Rust iOS target
+        run: rustup target add aarch64-apple-ios
+
+      - name: Build host protoc
+        run: |
+          cp -r _zvec _zvec-host
+          cmake -S _zvec-host -B _zvec-host/build -G Ninja -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build _zvec-host/build --target protoc --parallel
+
+      - name: Build zvec C API for iOS
+        run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          NPROC=$(sysctl -n hw.ncpu)
+          cmake -S _zvec -B _zvec/build -G Ninja \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT="$SDK_PATH" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DBUILD_C_BINDINGS=ON \
+            -DBUILD_PYTHON_BINDINGS=OFF \
+            -DBUILD_TOOLS=OFF \
+            -DGLOBAL_CC_PROTOBUF_PROTOC="$GITHUB_WORKSPACE/_zvec-host/build/bin/protoc" \
+            -DIOS=ON
+          cmake --build _zvec/build --target zvec_c_api --parallel "$NPROC"
+
+      - name: Check Rust bindings for iOS
+        run: ZVEC_LIB_DIR="$GITHUB_WORKSPACE/_zvec/build/lib" cargo check -p zvec --target aarch64-apple-ios --locked
+
+      - name: Package iOS artifact smoke
+        run: |
+          mkdir -p staging
+          cp _zvec/build/lib/libzvec_c_api.dylib staging/
+          tar -czf zvec_c_api-aarch64-apple-ios.tar.gz -C staging .
+          test -s zvec_c_api-aarch64-apple-ios.tar.gz
