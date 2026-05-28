@@ -11,13 +11,13 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 // update the checksums for new releases by replacing the old ones in-place.
 #[rustfmt::skip]
 const CHECKSUMS: &[(&str, &str)] = &[
-    ("x86_64-unknown-linux-gnu", "0c2cb5ace4d884f4b32234516da1d5b5ecb17dc9efa795601c9e461730326844"),
-    ("aarch64-unknown-linux-gnu", "9e638e0d99e44fe4683c9d5c9fd7001abe3e8953380cf7551fa9104bcdcd14f1"),
-    ("x86_64-apple-darwin", "a0131f9de3350d347d3387c45d2239211183bdb62337cce45062d3e12137b135"),
-    ("aarch64-apple-darwin", "d6fecae9f9fcda227f1bb97b4a4c4ce7fa1fcacd9b2a780cf561481c640e71b7"),
-    ("aarch64-apple-ios", ""),
-    ("x86_64-pc-windows-msvc", "99877be231752acff774b05fef512f2016d71043343b6543d0177d445df8c9b4"),
-    ("aarch64-linux-android", "2f75c54d655626f34739d29a7177fec7e607deeda4f08e98c3aff76899cb988e"),
+    ("x86_64-unknown-linux-gnu", "02c60f060f2d77379794d8738aeb1a0cba24ec2949fed557790193e48bf42e53"),
+    ("aarch64-unknown-linux-gnu", "c84d3206440433259058d4108a94c9aa27a5c5aec47a94f8e84067085d43a8e9"),
+    ("x86_64-apple-darwin", "50acab59ee3c19fb7822df74defdf8bb400a821d837fef699190c4fbf762de85"),
+    ("aarch64-apple-darwin", "7d83810dd4f29afb4eafb62f8317d456907908899b6d52e4f3715af5d9696925"),
+    ("aarch64-apple-ios", "966f92d164dac28c65183b026492fff910574b3fe8f55475a886ea2a85e92c64"),
+    ("x86_64-pc-windows-msvc", "b0b4d2c0a9dd9ca2291d47e226e4308f72e70592977901739a5d2d00c0fc27ba"),
+    ("aarch64-linux-android", "2b6bbb42cf4035822d3056ad7b25e669a7da790f46147ef327c3c68793041098"),
 ];
 
 fn target_triple() -> String {
