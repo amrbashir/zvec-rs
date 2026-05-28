@@ -72,6 +72,11 @@ jobs:
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v6
 
+      - name: Patch zvec iOS static library names
+        run: |
+          perl -0pi -e 's/if\(NOT MSVC\)\n    set_property\(TARGET \$\{_NAME\}_static PROPERTY OUTPUT_NAME \$\{_NAME\}\)\n  endif\(\)/if(NOT MSVC AND NOT IOS)\n    set_property(TARGET \${_NAME}_static PROPERTY OUTPUT_NAME \${_NAME})\n  endif()/g' _zvec/cmake/bazel.cmake
+          grep -q 'if(NOT MSVC AND NOT IOS)' _zvec/cmake/bazel.cmake
+
       - name: Add Rust iOS target
         run: rustup target add aarch64-apple-ios
 
