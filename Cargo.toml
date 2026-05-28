@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "zvec"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 description = "Rust bindings for the zvec in-process vector database"
 license = "Apache-2.0"
